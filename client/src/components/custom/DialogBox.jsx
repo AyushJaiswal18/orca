@@ -10,12 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-import axios from "axios";
+import apiClient from "@/utils/api";
 
 export default function DialogBox({ setInstances, disabled, instance }) {
   const handleDelete = async () => {
     try {
-      const data = await axios.get(
+      const data = await apiClient.get(
         `/containers/stopContainer/${instance.taskArn}`
       );
       const ins = await getInstances();
@@ -26,7 +26,7 @@ export default function DialogBox({ setInstances, disabled, instance }) {
   };
 
   const getInstances = async () => {
-    const res = await axios.get("/containers/getContainers");
+    const res = await apiClient.get("/containers/getContainers");
     return res.data;
   };
 

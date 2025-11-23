@@ -11,6 +11,7 @@ build/
 .env
 .env.local
 .env.*.local
+client/.env.local
 
 # Logs
 logs

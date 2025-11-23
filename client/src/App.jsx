@@ -5,7 +5,7 @@ import Signup from "./components/custom/SignUp";
 import { useAuth } from "./contexts/authContext";
 import ProtectedRoutes from "./utils/ProtectedRoutes";
 import Profile from "./pages/Profile";
-import axios from "axios";
+import apiClient from "./utils/api";
 import Dashboard from "./pages/Dashboard";
 import LauncherPage from "./pages/LauncherPage";
 import BuyCreditsPage from "./pages/BuyCreditsPage";
@@ -34,7 +34,7 @@ function App() {
   }, []);
 
   const checkAuthStatus = async () => {
-    const res = await axios.get("/users/cookieChecker");
+    const res = await apiClient.get("/users/cookieChecker");
     return res.data;
   };
 

@@ -12,7 +12,7 @@ import {
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
 import { useAuth } from "@/contexts/authContext";
-import axios from "axios";
+import apiClient from "@/utils/api";
 
 const Signup = () => {
   const { toast } = useToast();
@@ -27,7 +27,7 @@ const Signup = () => {
 
   const handleSignup = async () => {
     try {
-      const res = await axios.post("/users/register", {
+      const res = await apiClient.post("/users/register", {
         first_name: formData.first_name,
         last_name: formData.last_name,
         email: formData.email,

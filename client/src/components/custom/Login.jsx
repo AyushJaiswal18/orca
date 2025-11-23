@@ -12,7 +12,7 @@ import {
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
 import { useAuth } from "@/contexts/authContext";
-import axios from "axios";
+import apiClient from "@/utils/api";
 
 const Login = () => {
   const { authStatus, setauthStatus } = useAuth();
@@ -25,7 +25,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("/users/login", {
+      const res = await apiClient.post("/users/login", {
         email: formData.email,
         password: formData.password,
       });

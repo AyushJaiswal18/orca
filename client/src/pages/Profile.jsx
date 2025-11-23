@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../contexts/authContext";
-import axios from "axios";
+import apiClient from "@/utils/api";
 import { Link } from "react-router-dom";
 
 import Sidebar from "@/components/custom/Sidebar";
@@ -17,7 +17,7 @@ export default function Profile() {
             <Button
               onClick={async () => {
                 try {
-                  const res = await axios.get("/users/logout");
+                  const res = await apiClient.get("/users/logout");
                   setauthStatus(false);
                 } catch (error) {}
               }}

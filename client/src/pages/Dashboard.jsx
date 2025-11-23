@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import InstanceTable from "@/components/custom/InstanceTable";
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/custom/Sidebar";
-import axios from "axios";
+import apiClient from "@/utils/api";
 import { HashLoader } from "react-spinners";
 
 export default function Dashboard() {
@@ -38,12 +38,12 @@ export default function Dashboard() {
   };
 
   const getUser = async () => {
-    const res = await axios.get("/users/cookieChecker");
+    const res = await apiClient.get("/users/cookieChecker");
     return res.data;
   };
 
   const getInstances = async () => {
-    const res = await axios.get("/containers/getContainers");
+    const res = await apiClient.get("/containers/getContainers");
     return res.data;
   };
 

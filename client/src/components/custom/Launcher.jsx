@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import ServiceCard from "@/components/custom/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import apiClient from "@/utils/api";
 import { HashLoader } from "react-spinners";
 import { useToast } from "../ui/use-toast";
 import {
@@ -39,7 +39,7 @@ export default function Launcher() {
 
   const getServices = async () => {
     try {
-      const ser = await axios.get("/services/getServices");
+      const ser = await apiClient.get("/services/getServices");
       return ser.data;
     } catch (error) {
       toast({
@@ -55,7 +55,7 @@ export default function Launcher() {
     setLoading(true);
     try {
       console.log(instanceName, selectedService, region);
-      const res = await axios.post("/containers/startNew", {
+      const res = await apiClient.post("/containers/startNew", {
         instanceName,
         selectedService,
         region,
