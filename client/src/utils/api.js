@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthToken, removeAuthToken } from "./auth.js";
 
 // Get API base URL from environment variable
 // In development: uses Vite proxy (empty string for relative paths)
@@ -8,16 +9,18 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 // Create axios instance with default configuration
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Important for cookie-based auth
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Request interceptor (optional - for adding auth tokens, etc.)
+// Request interceptor - add Authorization header with bearer token
 apiClient.interceptors.request.use(
   (config) => {
-    // You can add auth tokens here if needed
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -33,8 +36,9 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle common errors
     if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
-      if (window.location.pathname !== "/login") {
+      // Unauthorized - remove token and redirect to login
+      removeAuthToken();
+      if (window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
         window.location.href = "/login";
       }
     }

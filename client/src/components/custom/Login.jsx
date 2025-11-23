@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
 import { useAuth } from "@/contexts/authContext";
 import apiClient from "@/utils/api";
+import { setAuthToken } from "@/utils/auth";
 
 const Login = () => {
   const { authStatus, setauthStatus } = useAuth();
@@ -29,12 +30,18 @@ const Login = () => {
         email: formData.email,
         password: formData.password,
       });
+      
+      // Store token from response
+      if (res.data?.data?.token) {
+        setAuthToken(res.data.data.token);
+      }
+      
       setauthStatus(true);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Uh oh! Some error has occured.",
-        description: error.response.data.message,
+        description: error.response?.data?.message || "Login failed",
       });
     }
   };

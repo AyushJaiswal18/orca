@@ -2,7 +2,6 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import setTokenAsCookie from "../utils/setTokenAsCookie.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { first_name, last_name, email, password } = req.body;
@@ -23,14 +22,15 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Not able to register!");
   }
   const token = await createdUser.generateAccessToken();
-  setTokenAsCookie(res, token);
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered Successfully!"));
+    .json(new ApiResponse(200, { user: createdUser, token }, "User registered Successfully!"));
 });
 
-export const cookieChecker = asyncHandler(async (req, res) => {
-  res.status(200).json(new ApiResponse(200, req.user, "User is Logged in!"));
+export const verifyAuth = asyncHandler(async (req, res) => {
+  // Verify token and return current user
+  // req.user is set by auth middleware after validating bearer token
+  res.status(200).json(new ApiResponse(200, req.user, "User is authenticated!"));
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
@@ -47,20 +47,16 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid Password!");
   }
   const token = await existedUser.generateAccessToken();
-  setTokenAsCookie(res, token);
   const user = existedUser.toObject();
   delete user.password;
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Logged in Successfully!"));
+    .json(new ApiResponse(200, { user, token }, "Logged in Successfully!"));
 });
 
 export const logoutUser = asyncHandler(async (req, res) => {
-  res.cookie("orca", "", {
-    httpOnly: true,
-    expires: new Date(0),
-  });
-  res.status(200).json({ message: "Logged out successfully" });
+  // With bearer token auth, logout is handled client-side by removing the token
+  res.status(200).json(new ApiResponse(200, {}, "Logged out successfully"));
 });
 
 export const getUserById = asyncHandler(async (req, res) => {

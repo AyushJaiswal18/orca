@@ -45,7 +45,7 @@ export default function Dashboard() {
   };
 
   const getUser = async () => {
-    const res = await apiClient.get("/users/cookieChecker");
+    const res = await apiClient.get("/users/verify");
     return res.data;
   };
 

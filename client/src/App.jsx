@@ -6,6 +6,7 @@ import { useAuth } from "./contexts/authContext";
 import ProtectedRoutes from "./utils/ProtectedRoutes";
 import Profile from "./pages/Profile";
 import apiClient from "./utils/api";
+import { getAuthToken, removeAuthToken } from "./utils/auth";
 import Dashboard from "./pages/Dashboard";
 import LauncherPage from "./pages/LauncherPage";
 import BuyCreditsPage from "./pages/BuyCreditsPage";
@@ -25,6 +26,7 @@ function App() {
         navigate("/dashboard");
       })
       .catch((err) => {
+        removeAuthToken();
         setauthStatus(false);
         navigate("/login");
       })
@@ -34,7 +36,14 @@ function App() {
   }, []);
 
   const checkAuthStatus = async () => {
-    const res = await apiClient.get("/users/cookieChecker");
+    // Check if token exists first
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error("No token found");
+    }
+    
+    // Verify token with backend
+    const res = await apiClient.get("/users/verify");
     return res.data;
   };
 

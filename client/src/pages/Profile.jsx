@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../contexts/authContext";
 import apiClient from "@/utils/api";
+import { removeAuthToken } from "@/utils/auth";
 import { Link } from "react-router-dom";
 
 import Sidebar from "@/components/custom/Sidebar";
@@ -17,9 +18,13 @@ export default function Profile() {
             <Button
               onClick={async () => {
                 try {
-                  const res = await apiClient.get("/users/logout");
+                  await apiClient.get("/users/logout");
+                } catch (error) {
+                  // Continue with logout even if API call fails
+                } finally {
+                  removeAuthToken();
                   setauthStatus(false);
-                } catch (error) {}
+                }
               }}
             >
               Logout

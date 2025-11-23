@@ -1,11 +1,9 @@
 import express from "express";
-import cookieParser from "cookie-parser";
 import cors from "cors";
 import { corsOptions, jsonOptions, urlEncodedOptions } from "./constants.js";
 
 const app = express();
 
-app.use(cookieParser());
 app.use(cors(corsOptions));
 app.use(express.json(jsonOptions));
 app.use(express.urlencoded(urlEncodedOptions));

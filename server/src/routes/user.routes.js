@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  cookieChecker,
+  verifyAuth,
   loginUser,
   logoutUser,
   registerUser,
@@ -13,9 +13,9 @@ router.route("/register").post(registerUser);
 
 router.route("/login").post(loginUser);
 
-router.route("/logout").get(logoutUser);
+router.route("/logout").get(auth, logoutUser);
 
-router.route("/cookieChecker").get(auth, cookieChecker);
+router.route("/verify").get(auth, verifyAuth);
 
 // router.route("/profile").get();
 
