@@ -1,15 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import asyncHandler from "./utils/asyncHandler.js";
-import {
-  corsOptions,
-  jsonOptions,
-  serverName,
-  urlEncodedOptions,
-} from "./constants.js";
-import { prometheusMetricsMiddleware } from "./middlewares/metrics.middleware.js";
-import { metricsHandler } from "./utils/metrics.js";
+import { corsOptions, jsonOptions, urlEncodedOptions } from "./constants.js";
 
 const app = express();
 
@@ -18,23 +10,17 @@ app.use(cors(corsOptions));
 app.use(express.json(jsonOptions));
 app.use(express.urlencoded(urlEncodedOptions));
 app.use(express.static("public"));
-app.use(prometheusMetricsMiddleware);
+
+app.use("/health", (req, res) => {
+  return res.status(200).json({ message: "Healthy Orca Server!" });
+});
 
 //Route Settings
 import userRouter from "./routes/user.routes.js";
-
+import containerRouter from "./routes/container.routes.js";
+import serviceRouter from "./routes/services.routes.js";
 app.use("/api/v1/users", userRouter);
-
-app.get(
-  "/api/v1/health",
-  asyncHandler(async (req, res) => {
-    res
-      .status(200)
-      .json({ message: `${serverName} is Running...`, success: true });
-  })
-);
-
-//prometheus metrics endpoint
-app.get("/metrics", metricsHandler);
+app.use("/api/v1/containers", containerRouter);
+app.use("/api/v1/services", serviceRouter);
 
 export default app;

@@ -1,5 +1,3 @@
-import { logger } from "./logger.js";
-
 class ApiError extends Error {
   constructor(
     statusCode,
@@ -18,11 +16,6 @@ class ApiError extends Error {
     } else {
       Error.captureStackTrace(this, this.constructor);
     }
-    // Log the error details
-    logger.error("ApiError", {
-      statusCode,
-      message,
-    });
   }
 }
 

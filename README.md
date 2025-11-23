@@ -34,6 +34,16 @@ For detailed setup instructions, see [docs/README.md](docs/README.md).
 - **Backend**: Express.js, MongoDB, JWT Auth, BullMQ, Cloudinary, Razorpay
 - **Frontend**: React 19, Vite, React Router, Axios with auto token handling
 - **Infrastructure**: Docker, Docker Compose, Traefik, GitHub Actions
+- **Container Management**: AWS ECS Fargate integration for multi-region container deployment
+- **KasmWebspaces Support**: Launch KasmWebspaces containers across multiple AWS regions
+
+## KasmWebspaces Multi-Region Support
+
+The platform now supports launching KasmWebspaces containers across multiple AWS regions.
+
+- **Quick Start**: See [docs/QUICK_START_KASMWEBSPACES.md](docs/QUICK_START_KASMWEBSPACES.md)
+- **Full Setup Guide**: See [docs/KASMWEBSPACES_SETUP.md](docs/KASMWEBSPACES_SETUP.md)
+- **Implementation Status**: See [KASMWEBSPACES_IMPLEMENTATION.md](KASMWEBSPACES_IMPLEMENTATION.md)
 
 ---
 

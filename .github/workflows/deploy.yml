@@ -15,7 +15,7 @@ jobs:
           username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/projects/my-app
+            cd ~/projects/orca
             git fetch origin main
             git reset --hard origin/main
             docker compose build

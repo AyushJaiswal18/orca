@@ -1,10 +1,20 @@
 import mongoose, { Schema } from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import mongoosePaginate from "mongoose-paginate-v2";
 
 const userSchema = new Schema(
   {
+    first_name: {
+      type: String,
+      required: [true, "First name is required"],
+      trim: true,
+    },
+    last_name: {
+      type: String,
+      required: [true, "Last name is required"],
+      trim: true,
+    },
     email: {
       type: String,
       required: true,
@@ -14,51 +24,38 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    firstName: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 3,
+    credits: {
+      type: Number,
+      default: 50,
     },
-    lastName: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 3,
+    isProMember: {
+      type: Boolean,
+      default: false,
     },
-    phone: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    
   },
   { timestamps: true }
 );
 
-userSchema.plugin(mongoosePaginate);
-
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password") || !this.isNew) {
+  if (!this.isModified("password")) {
     return next();
   }
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
+userSchema.methods.isPasswordValid = async function (password) {
+  return await bcrypt.compare(password, this.password);
+};
 
 userSchema.methods.generateAccessToken = function () {
-  const x = jwt.sign({ _id: this._id }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-  });
-  return x;
+  return jwt.sign(
+    { _id: this._id, username: this.username },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+  );
 };
 
-userSchema.methods.generateRefreshToken = function () {
-  const x = jwt.sign({ _id: this._id }, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-  });
-  return x;
-};
+userSchema.plugin(mongooseAggregatePaginate); // Pipeline aggregation usage
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model("Users", userSchema);

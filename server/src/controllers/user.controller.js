@@ -2,111 +2,72 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { sendOtpMail} from "../utils/sendMail.js";
-import { logger } from "../utils/logger.js";
+import setTokenAsCookie from "../utils/setTokenAsCookie.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName } = req.body;
-  logger.info("User registration attempt", { module: "user", email, name: `${firstName} ${lastName}` });
+  const { first_name, last_name, email, password } = req.body;
   if (
-    [email, password, firstName, lastName].some((field) => field?.trim() === "")
+    [first_name, last_name, email, password].some(
+      (field) => field?.trim() === ""
+    )
   ) {
     throw new ApiError(400, "All Fields are Required!");
   }
-  const existedUser = await User.findOne({ email: email });
+  const existedUser = await User.findOne({ $or: [{ email }] });
   if (existedUser) {
-    if (existedUser.isEmailVerified) {
-      throw new ApiError(409, "User already exists!");
-    } else {
-      await User.deleteOne({ _id: existedUser._id });
-    }
+    throw new ApiError(409, "User already exists!");
   }
-  try {
-    const user = new User({ email, password, firstName, lastName });
-    await user.save();
-    logger.info("User registered successfully", { module: "user", userId: user._id, email: user.email, name: `${user.firstName} ${user.lastName}` });
-    const token = await user.generateAccessToken();
-    const refreshToken = await user.generateRefreshToken();
-    const otp = await user.generateOtp();
-    const mailRes = await sendOtpMail(email, firstName, otp);
-    if (!mailRes) {
-      logger.error("Failed to send OTP email during registration", { module: "user", email, name: `${firstName} ${lastName}` });
-      throw new ApiError(
-        500,
-        "Failed to send OTP email. Please try again later."
-      );
-    }
-    const data = {
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        isEmailVerified: user.isVerified,
-        avatar: user.avatar,
-      },
-      token,
-      refreshToken,
-    };
-    return res
-      .status(201)
-      .json(new ApiResponse(201, data, "User Registered Successfully!"));
-  } catch (error) {
-    logger.error("User registration failed", { module: "user", email, name: `${firstName} ${lastName}`, error: error.message });
-    throw new ApiError(500, "Failed to register user", error);
+  const user = await User.create({ first_name, last_name, email, password });
+  const createdUser = await User.findById(user._id).select("-password");
+  if (!createdUser) {
+    throw new ApiError(500, "Not able to register!");
   }
+  const token = await createdUser.generateAccessToken();
+  setTokenAsCookie(res, token);
+  return res
+    .status(201)
+    .json(new ApiResponse(200, createdUser, "User registered Successfully!"));
+});
+
+export const cookieChecker = asyncHandler(async (req, res) => {
+  res.status(200).json(new ApiResponse(200, req.user, "User is Logged in!"));
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  logger.info("User login attempt", { module: "user", email });
   if ([email, password].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All Fields are Required!");
   }
   const existedUser = await User.findOne({ email: email });
   if (!existedUser) {
-    logger.warn("Login failed: user does not exist", { module: "user", email });
     throw new ApiError(409, "User does not exists!");
-  }
-  if (!existedUser.isEmailVerified) {
-    logger.warn("Login failed: email not verified", { module: "user", email, userId: existedUser._id, name: `${existedUser.firstName} ${existedUser.lastName}` });
-    throw new ApiError(403, "Email is not verified. Please register again.");
   }
   const result = await existedUser.isPasswordValid(password);
   if (!result) {
-    logger.warn("Login failed: invalid password", { module: "user", email, userId: existedUser._id, name: `${existedUser.firstName} ${existedUser.lastName}` });
     throw new ApiError(400, "Invalid Password!");
   }
   const token = await existedUser.generateAccessToken();
-  const refreshToken = await existedUser.generateRefreshToken();
-  const user = {
-    id: existedUser._id,
-    email: existedUser.email,
-    firstName: existedUser.firstName,
-    lastName: existedUser.lastName,
-    phone: existedUser.phone,
-    avatar: existedUser.avatar,
-    isEmailVerified: existedUser.isVerified,
-    createdAt: existedUser.createdAt,
-    updatedAt: existedUser.updatedAt,
-  };
-  const data = { user, token, refreshToken };
-  await Activity.create({
-    userId: existedUser._id,
-    type: "login",
-    doneByAdmin: false,
-  });
-  logger.info("User logged in successfully", { module: "user", userId: existedUser._id, email: existedUser.email, name: `${existedUser.firstName} ${existedUser.lastName}` });
+  setTokenAsCookie(res, token);
+  const user = existedUser.toObject();
+  delete user.password;
   return res
     .status(200)
-    .json(new ApiResponse(200, data, "Logged in Successfully!"));
+    .json(new ApiResponse(200, user, "Logged in Successfully!"));
 });
 
 export const logoutUser = asyncHandler(async (req, res) => {
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Logged out successfully!"));
+  res.cookie("orca", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+  res.status(200).json({ message: "Logged out successfully" });
 });
 
+export const getUserById = asyncHandler(async (req, res) => {
+  const id = req.params.userid;
+  const user = await User.findById(id).select("-password");
+  if (!user) {
+    throw new ApiError(400, `User with id ${id} is not found!`);
+  }
+  return res.status(200).json(new ApiResponse(200, user));
+});

@@ -45,3 +45,11 @@ Thumbs.db
 *.temp
 .cache/
 
+# Deployment files
+server/public/temp/*
+!server/public/temp/.gitkeep
+
+# Build artifacts
+client/dist/
+server/dist/
+

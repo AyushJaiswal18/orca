@@ -5,7 +5,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: myapp-server
+    container_name: orca-server
     restart: unless-stopped
     env_file:
       - server/.env
@@ -13,22 +13,22 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.myapp-api.rule=Host(`api.myapp.builtwithayush.tech`)"
+      - "traefik.http.routers.myapp-api.rule=Host(`api.orca.builtwithayush.tech`)"
       - "traefik.http.routers.myapp-api.entrypoints=websecure"
       - "traefik.http.routers.myapp-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.myapp-api.loadbalancer.server.port=3000"
+      - "traefik.http.services.myapp-api.loadbalancer.server.port=8080"
 
   client:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: myapp-client
+    container_name: orca-client
     restart: unless-stopped
     networks:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.myapp-app.rule=Host(`myapp.builtwithayush.tech`)"
+      - "traefik.http.routers.myapp-app.rule=Host(`orca.builtwithayush.tech`)"
       - "traefik.http.routers.myapp-app.entrypoints=websecure"
       - "traefik.http.routers.myapp-app.tls.certresolver=letsencrypt"
       - "traefik.http.services.myapp-app.loadbalancer.server.port=80"
