@@ -16,8 +16,11 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.936.0",
     "@aws-sdk/client-ec2": "^3.614.0",
     "@aws-sdk/client-ecs": "^3.606.0",
+    "@aws-sdk/client-sns": "^3.936.0",
+    "@aws-sdk/client-sts": "^3.936.0",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
