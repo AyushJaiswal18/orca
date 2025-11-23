@@ -71,10 +71,10 @@ export const getContainers = asyncHandler(async (req, res) => {
 
 export const containerUpdates = asyncHandler(async (req, res) => {
   const body = req.body;
-
+  console.log("Confirming subscription:", body.SubscribeURL);
   if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
     try {
-      console.log("Confirming subscription:", body.SubscribeURL);
+      
       await axios.get(body.SubscribeURL);
     } catch (error) {
       console.error("Error confirming subscription:", error);
