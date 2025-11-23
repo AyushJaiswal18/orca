@@ -4,7 +4,7 @@ import { getAuthToken, removeAuthToken } from "./auth.js";
 // Get API base URL from environment variable
 // In development: uses Vite proxy (empty string for relative paths)
 // In production: uses VITE_API_URL environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.orca.builtwithayush.tech/api/v1";
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
