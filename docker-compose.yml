@@ -24,6 +24,8 @@ services:
       dockerfile: Dockerfile
     container_name: orca-client
     restart: unless-stopped
+    env_file:
+      - client/.env
     networks:
       - web
     labels:
