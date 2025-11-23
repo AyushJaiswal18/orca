@@ -19,15 +19,22 @@ export default function Dashboard() {
     setLoading(true);
     getUser()
       .then((data) => {
-        setUser(data.data);
+        setUser(data.data || {});
         getInstances()
           .then((data) => {
-            setInstances(data.data);
+            setInstances(data.data || []);
           })
-          .catch((err) => {});
+          .catch((err) => {
+            console.error("Error fetching instances:", err);
+            setInstances([]);
+          });
         setLoading(false);
       })
-      .catch((err) => {});
+      .catch((err) => {
+        console.error("Error fetching user:", err);
+        setUser({});
+        setLoading(false);
+      });
   }, []);
 
   const refreshContent = async () => {
@@ -73,7 +80,7 @@ export default function Dashboard() {
           <div className="flex justify-between">
             <div className="mr-3 w-1/3">
               <h2 className="mb-4 text-3xl font-semibold">
-                Hello, {user.first_name + " " + user.last_name}
+                Hello, {user?.first_name || ""} {user?.last_name || ""}
               </h2>
               <div className="flex items-center space-x-2">
                 <p className="mb-4 text-lg">
@@ -83,7 +90,7 @@ export default function Dashboard() {
             </div>
             <div className="p-4 border rounded-md bg-secondary w-1/5 flex items-center justify-center">
               <h2 className="mb-2 text-2xl font-semibold">
-                Credits Left : {user.credits}
+                Credits Left : {user?.credits ?? 0}
               </h2>
             </div>
           </div>
