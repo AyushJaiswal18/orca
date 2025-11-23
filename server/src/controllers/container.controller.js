@@ -70,46 +70,101 @@ export const getContainers = asyncHandler(async (req, res) => {
 });
 
 export const containerUpdates = asyncHandler(async (req, res) => {
+  // Log incoming request for debugging
+  console.log("SNS Webhook received - Content-Type:", req.headers["content-type"]);
+  console.log("SNS Webhook - Body type:", typeof req.body);
+  console.log("SNS Webhook - Body keys:", req.body ? Object.keys(req.body) : "undefined");
+
   const body = req.body;
-  console.log("Confirming subscription:", body.SubscribeURL);
-  if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
-    try {
-      
-      await axios.get(body.SubscribeURL);
-    } catch (error) {
-      console.error("Error confirming subscription:", error);
-    }
-  } else {
-    const message = JSON.parse(req.body.Message);
-    const lastStatus = message.detail.lastStatus;
-    const taskArn = message.detail.taskArn.split("/").pop();
-    const desiredStatus = message.detail.desiredStatus;
-    console.log(
-      `Task : ${taskArn} LastStatus: ${lastStatus} DesiredStatus: ${desiredStatus}`
-    );
-    const task = await Containers.findOne({ taskArn: taskArn });
-    if (task) {
-      if (lastStatus === "RUNNING" && desiredStatus === "RUNNING") {
-        const publicIp = await getTaskPublicIp(taskArn, task.region);
-        if (publicIp) {
-          task.url = publicIp;
-          task.status = "RUNNING";
-          await task.save();
-        } else {
-          await Containers.findByIdAndDelete(task._id);
-        }
-      } else if (lastStatus === "STOPPED") {
-        try {
-          await Containers.findByIdAndDelete(task._id);
-        } catch (error) {
-          console.error(error);
-        }
-      } else {
-        task.status = lastStatus;
-        await task.save();
+
+  // Handle case where body might be undefined or empty
+  if (!body || (typeof body === "object" && Object.keys(body).length === 0)) {
+    console.error("SNS Webhook - Empty or undefined body received");
+    console.log("Request headers:", req.headers);
+    return res.status(200).send("OK"); // Return OK to prevent retries
+  }
+
+  // Handle SubscriptionConfirmation
+  if (body.Type === "SubscriptionConfirmation") {
+    console.log("SNS Subscription Confirmation received");
+    console.log("SubscribeURL:", body.SubscribeURL);
+    
+    if (body.SubscribeURL) {
+      try {
+        const response = await axios.get(body.SubscribeURL);
+        console.log("Subscription confirmed successfully");
+        return res.status(200).send("OK");
+      } catch (error) {
+        console.error("Error confirming subscription:", error.message);
+        // Still return OK to prevent SNS retries
+        return res.status(200).send("OK");
       }
     }
+    return res.status(200).send("OK");
   }
+
+  // Handle Notification (task status updates)
+  if (body.Type === "Notification" && body.Message) {
+    try {
+      // Parse the Message field (it's a JSON string)
+      const message = typeof body.Message === "string" 
+        ? JSON.parse(body.Message) 
+        : body.Message;
+
+      // Handle ECS task state change events
+      if (message.detail && message.detail.taskArn) {
+        const lastStatus = message.detail.lastStatus;
+        const taskArn = message.detail.taskArn.split("/").pop();
+        const desiredStatus = message.detail.desiredStatus;
+        
+        console.log(
+          `Task Update: ${taskArn} | LastStatus: ${lastStatus} | DesiredStatus: ${desiredStatus}`
+        );
+
+        const task = await Containers.findOne({ taskArn: taskArn });
+        
+        if (task) {
+          if (lastStatus === "RUNNING" && desiredStatus === "RUNNING") {
+            // Task is running, get public IP
+            const publicIp = await getTaskPublicIp(taskArn, task.region);
+            if (publicIp) {
+              task.url = publicIp;
+              task.status = "RUNNING";
+              await task.save();
+              console.log(`Task ${taskArn} is RUNNING at ${publicIp}`);
+            } else {
+              console.log(`Could not get public IP for task ${taskArn}, deleting container`);
+              await Containers.findByIdAndDelete(task._id);
+            }
+          } else if (lastStatus === "STOPPED") {
+            // Task stopped, delete container record
+            console.log(`Task ${taskArn} is STOPPED, deleting container`);
+            try {
+              await Containers.findByIdAndDelete(task._id);
+            } catch (error) {
+              console.error("Error deleting stopped container:", error);
+            }
+          } else {
+            // Update status for other states (PROVISIONING, PENDING, etc.)
+            task.status = lastStatus;
+            await task.save();
+            console.log(`Task ${taskArn} status updated to ${lastStatus}`);
+          }
+        } else {
+          console.log(`No container found for task ${taskArn}`);
+        }
+      } else {
+        console.log("SNS Notification received but no task detail found in message");
+      }
+    } catch (error) {
+      console.error("Error processing SNS notification:", error);
+      console.error("Message content:", body.Message);
+    }
+  } else {
+    console.log("SNS webhook received with unknown format:", body.Type);
+  }
+
+  // Always return 200 OK to acknowledge receipt
   return res.status(200).send("OK");
 });
 
