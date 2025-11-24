@@ -41,15 +41,11 @@ export const regionConfig = {
   "us-east-2": {
     // Ohio
     subnets: [
-      // TODO: Replace with your actual subnet IDs for us-east-2
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-0fc4092cb024cfe7c",
+      "subnet-0f96f24d9c71f7b53",
+      "subnet-057d387fda9c4fa9f",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for us-east-2
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0555fe3c2969dd71e"],
   },
   "us-west-1": {
     // N California
