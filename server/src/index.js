@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 const PORT = process.env.PORT || 8080;
 
 // Polling interval in milliseconds (default: 30 seconds)
-const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || "30000", 10);
+const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || "20000", 10);
 
 dotenv.config({
   path: ".env",

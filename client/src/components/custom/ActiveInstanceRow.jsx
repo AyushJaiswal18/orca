@@ -4,6 +4,7 @@ import DialogBox from "./DialogBox";
 import { Globe, Clock } from "lucide-react";
 import { useMemo } from "react";
 import apiClient from "@/utils/api";
+import { getAuthToken } from "@/utils/auth";
 
 // Region display names mapping
 const REGION_NAMES = {
@@ -98,6 +99,13 @@ function formatRegion(region) {
 export default function ActiveInstanceRow({ instance, setInstances }) {
   const serviceIcon = useMemo(() => getServiceIcon(instance.service?.name), [instance.service?.name]);
 
+  // Build proxy URL with token for authentication
+  const getProxyUrl = (taskArn) => {
+    const token = getAuthToken();
+    const baseUrl = `${apiClient.defaults.baseURL}/containers/proxy/${taskArn}`;
+    return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+  };
+
   return (
     <TableRow className="hover:bg-muted/50">
       <TableCell className="py-3">
@@ -131,7 +139,7 @@ export default function ActiveInstanceRow({ instance, setInstances }) {
           {instance.status === "RUNNING" && instance.taskArn && (
             <a
               className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
-              href={`${apiClient.defaults.baseURL}/containers/proxy/${instance.taskArn}`}
+              href={getProxyUrl(instance.taskArn)}
               target="_blank"
               rel="noopener noreferrer"
             >

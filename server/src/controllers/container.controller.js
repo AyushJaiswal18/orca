@@ -210,23 +210,58 @@ export const proxyContainer = asyncHandler(async (req, res) => {
   const { taskArn } = req.params;
 
   // Get target URL
-  const targetUrl = await getContainerTargetUrl(taskArn, req.user._id);
+  let targetUrl;
+  try {
+    targetUrl = await getContainerTargetUrl(taskArn, req.user._id);
+    console.log(`[Proxy] Proxying to: ${targetUrl} for taskArn: ${taskArn}`);
+  } catch (error) {
+    console.error(`[Proxy] Error getting target URL for ${taskArn}:`, error.message);
+    throw error;
+  }
 
-  // Create proxy instance
+  // Create proxy instance with timeout
   const proxy = httpProxy.createProxyServer({
     target: targetUrl,
     ws: true, // Enable WebSocket proxying
     changeOrigin: true,
     secure: false, // KasmWeb uses HTTP, not HTTPS
+    timeout: 30000, // 30 second timeout
+    proxyTimeout: 30000,
   });
 
-  // Handle proxy errors
+  // Handle proxy errors with detailed logging
   proxy.on("error", (err, req, res) => {
-    console.error("Proxy error:", err);
+    console.error(`[Proxy] Error proxying to ${targetUrl}:`, {
+      message: err.message,
+      code: err.code,
+      taskArn,
+    });
+    
     if (!res.headersSent) {
+      // Provide more specific error messages
+      let errorMessage = "Unable to connect to container";
+      if (err.code === "ECONNREFUSED") {
+        errorMessage = "Container is not accepting connections. It may be starting up or the security group may be blocking access.";
+      } else if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT") {
+        errorMessage = "Connection to container timed out. The container may be unreachable.";
+      } else if (err.code === "ENOTFOUND") {
+        errorMessage = "Container IP address not found.";
+      }
+      
       res.status(502).json({
         success: false,
-        message: "Proxy error: Unable to connect to container",
+        message: errorMessage,
+        error: err.code || "PROXY_ERROR",
+      });
+    }
+  });
+
+  // Set request timeout
+  req.setTimeout(30000, () => {
+    if (!res.headersSent) {
+      res.status(504).json({
+        success: false,
+        message: "Request timeout: Container did not respond in time",
       });
     }
   });
@@ -243,31 +278,44 @@ export const proxyContainerWebSocket = async (req, socket, head, userId) => {
     const { taskArn } = req.params || {};
     
     if (!taskArn) {
+      console.error("[Proxy WS] No taskArn provided");
       socket.destroy();
       return;
     }
 
     // Get target URL
-    const targetUrl = await getContainerTargetUrl(taskArn, userId);
-    const wsTargetUrl = targetUrl.replace("http://", "ws://");
+    let targetUrl;
+    try {
+      targetUrl = await getContainerTargetUrl(taskArn, userId);
+      const wsTargetUrl = targetUrl.replace("http://", "ws://");
+      console.log(`[Proxy WS] Proxying WebSocket to: ${wsTargetUrl} for taskArn: ${taskArn}`);
 
-    // Create proxy for WebSocket
-    const proxy = httpProxy.createProxyServer({
-      target: wsTargetUrl,
-      ws: true,
-      changeOrigin: true,
-      secure: false,
-    });
+      // Create proxy for WebSocket with timeout
+      const proxy = httpProxy.createProxyServer({
+        target: wsTargetUrl,
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+        timeout: 30000,
+      });
 
-    proxy.on("error", (err) => {
-      console.error("WebSocket proxy error:", err);
+      proxy.on("error", (err) => {
+        console.error(`[Proxy WS] Error proxying WebSocket to ${wsTargetUrl}:`, {
+          message: err.message,
+          code: err.code,
+          taskArn,
+        });
+        socket.destroy();
+      });
+
+      // Proxy the WebSocket connection
+      proxy.ws(req, socket, head);
+    } catch (error) {
+      console.error(`[Proxy WS] Error getting target URL for ${taskArn}:`, error.message);
       socket.destroy();
-    });
-
-    // Proxy the WebSocket connection
-    proxy.ws(req, socket, head);
+    }
   } catch (error) {
-    console.error("Error in WebSocket proxy:", error);
+    console.error("[Proxy WS] Error in WebSocket proxy:", error);
     socket.destroy();
   }
 };

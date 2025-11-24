@@ -7,7 +7,7 @@ import {
   stopContainer,
   proxyContainer,
 } from "../controllers/container.controller.js";
-import auth from "../middlewares/auth.js";
+import auth, { authFlexible } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -22,6 +22,7 @@ router.route("/stopContainer/:taskArn").get(auth, stopContainer);
 router.route("/updates").post(containerUpdates);
 
 // Proxy route - handles both HTTP and WebSocket
-router.route("/proxy/:taskArn").all(auth, proxyContainer);
+// Uses authFlexible to accept token from header OR query parameter
+router.route("/proxy/:taskArn").all(authFlexible, proxyContainer);
 
 export default router;
