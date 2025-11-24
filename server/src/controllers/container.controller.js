@@ -217,8 +217,8 @@ async function getContainerTargetUrl(taskArn, userId) {
     throw new ApiError(500, "Unable to get container IP address. The container may not be running.");
   }
 
-  // Target URL for KasmWeb (uses HTTP, not HTTPS)
-  return `http://${targetIp}:6901`;
+  // Target URL for KasmWeb (uses HTTPS)
+  return `https://${targetIp}:6901`;
 }
 
 // Proxy container access through server (HTTP)
@@ -240,11 +240,12 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     target: targetUrl,
     ws: true, // Enable WebSocket proxying
     changeOrigin: true,
-    secure: false, // KasmWeb uses HTTP, not HTTPS
+    secure: true, // KasmWeb uses HTTPS
     timeout: 60000, // 60 second timeout (containers may take time to respond)
     proxyTimeout: 60000,
     xfwd: true, // Add X-Forwarded-* headers
     followRedirects: true,
+    rejectUnauthorized: false, // Allow self-signed certificates from containers
   });
 
   // Handle proxy errors with detailed logging
@@ -323,7 +324,7 @@ export const proxyContainerWebSocket = async (req, socket, head, userId) => {
     let targetUrl;
     try {
       targetUrl = await getContainerTargetUrl(taskArn, userId);
-      const wsTargetUrl = targetUrl.replace("http://", "ws://");
+      const wsTargetUrl = targetUrl.replace("https://", "wss://");
       console.log(`[Proxy WS] Proxying WebSocket to: ${wsTargetUrl} for taskArn: ${taskArn}`);
 
       // Create proxy for WebSocket with timeout
@@ -331,8 +332,9 @@ export const proxyContainerWebSocket = async (req, socket, head, userId) => {
         target: wsTargetUrl,
         ws: true,
         changeOrigin: true,
-        secure: false,
-        timeout: 30000,
+        secure: true, // Use secure WebSocket (WSS)
+        timeout: 60000,
+        rejectUnauthorized: false, // Allow self-signed certificates from containers
       });
 
       proxy.on("error", (err) => {
