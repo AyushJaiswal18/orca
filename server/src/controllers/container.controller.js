@@ -312,7 +312,26 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     }
   });
 
-  // Handle regular HTTP requests
+  // Intercept response to handle Set-Cookie headers properly
+  // This ensures cookies from KasmWeb are forwarded and work with the proxy domain
+  proxy.on("proxyRes", (proxyRes, req, res) => {
+    // Handle Set-Cookie headers - rewrite domain to work with proxy
+    if (proxyRes.headers["set-cookie"]) {
+      const cookies = Array.isArray(proxyRes.headers["set-cookie"]) 
+        ? proxyRes.headers["set-cookie"] 
+        : [proxyRes.headers["set-cookie"]];
+      
+      // Rewrite cookie domain to work with proxy (remove domain restriction)
+      const rewrittenCookies = cookies.map((cookie) => {
+        // Remove domain attribute so cookie works with proxy domain
+        return cookie.replace(/;\s*domain=[^;]+/gi, "");
+      });
+      
+      res.setHeader("set-cookie", rewrittenCookies);
+    }
+  });
+
+  // Handle regular HTTP requests - http-proxy will automatically forward all headers and cookies
   proxy.web(req, res, {
     target: targetUrl,
     agent: httpsAgent, // Ensure agent is used for the request
