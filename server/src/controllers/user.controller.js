@@ -67,3 +67,70 @@ export const getUserById = asyncHandler(async (req, res) => {
   }
   return res.status(200).json(new ApiResponse(200, user));
 });
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { first_name, last_name, email } = req.body;
+  const userId = req.user._id;
+
+  // Check if email is being changed and if it's already taken
+  if (email) {
+    const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+    if (existingUser) {
+      throw new ApiError(409, "Email is already taken!");
+    }
+  }
+
+  const updateData = {};
+  if (first_name) updateData.first_name = first_name.trim();
+  if (last_name) updateData.last_name = last_name.trim();
+  if (email) updateData.email = email.trim();
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  ).select("-password");
+
+  if (!user) {
+    throw new ApiError(404, "User not found!");
+  }
+
+  return res.status(200).json(new ApiResponse(200, user, "Profile updated successfully!"));
+});
+
+export const buyCredits = asyncHandler(async (req, res) => {
+  const { amount } = req.body;
+  const userId = req.user._id;
+
+  if (!amount || amount <= 0) {
+    throw new ApiError(400, "Invalid credit amount!");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $inc: { credits: amount } },
+    { new: true }
+  ).select("-password");
+
+  if (!user) {
+    throw new ApiError(404, "User not found!");
+  }
+
+  return res.status(200).json(new ApiResponse(200, user, `Successfully added ${amount} credits!`));
+});
+
+export const upgradeToPro = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { isProMember: true } },
+    { new: true }
+  ).select("-password");
+
+  if (!user) {
+    throw new ApiError(404, "User not found!");
+  }
+
+  return res.status(200).json(new ApiResponse(200, user, "Successfully upgraded to Pro!"));
+});

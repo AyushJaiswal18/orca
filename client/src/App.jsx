@@ -13,6 +13,13 @@ import BuyCreditsPage from "./pages/BuyCreditsPage";
 import OrcaDetail from "./pages/OrcaDetail";
 import { HashLoader } from "react-spinners";
 import UpgradeToPro from "./pages/UpgradeToPro";
+import LandingPage from "./pages/LandingPage";
+import About from "./pages/About";
+import Documentation from "./pages/Documentation";
+import Contact from "./pages/Contact";
+import NotFound from "./pages/NotFound";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 
 function App() {
   const navigate = useNavigate();
@@ -23,12 +30,20 @@ function App() {
     checkAuthStatus()
       .then((data) => {
         setauthStatus(true);
-        navigate("/dashboard");
+        // If authenticated and on a public route, redirect to dashboard
+        const publicRoutes = ["/", "/login", "/signup"];
+        if (publicRoutes.includes(window.location.pathname)) {
+          navigate("/dashboard");
+        }
       })
       .catch((err) => {
         removeAuthToken();
         setauthStatus(false);
-        navigate("/login");
+        // If not authenticated and on a protected route, redirect to landing page
+        const publicRoutes = ["/", "/login", "/signup"];
+        if (!publicRoutes.includes(window.location.pathname)) {
+          navigate("/");
+        }
       })
       .finally(() => {
         setLoading(false);
@@ -50,7 +65,7 @@ function App() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <HashLoader />;
+        <HashLoader />
       </div>
     );
   }
@@ -65,9 +80,15 @@ function App() {
         <Route path="/orca-details/:id" element={<OrcaDetail />} />
         <Route path="/upgrade" element={<UpgradeToPro />} />
       </Route>
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/documentation" element={<Documentation />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

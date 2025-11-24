@@ -4,6 +4,9 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  updateProfile,
+  buyCredits,
+  upgradeToPro,
 } from "../controllers/user.controller.js";
 import auth from "../middlewares/auth.js";
 
@@ -17,10 +20,10 @@ router.route("/logout").get(auth, logoutUser);
 
 router.route("/verify").get(auth, verifyAuth);
 
-// router.route("/profile").get();
+router.route("/updateProfile").put(auth, updateProfile);
 
-// router.route("/updateProfile").get();
+router.route("/buyCredits").post(auth, buyCredits);
 
-// router.route("/deleteProfile").get();
+router.route("/upgradeToPro").post(auth, upgradeToPro);
 
 export default router;

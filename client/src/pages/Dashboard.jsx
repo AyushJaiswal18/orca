@@ -9,9 +9,25 @@ import Sidebar from "@/components/custom/Sidebar";
 import apiClient from "@/utils/api";
 import { HashLoader } from "react-spinners";
 
+// Region display names mapping
+const REGION_NAMES = {
+  "ap-south-1": "Mumbai",
+  "us-east-1": "N Virginia",
+  "us-east-2": "Ohio",
+  "us-west-1": "N California",
+  "ap-northeast-2": "Seoul",
+  "ap-southeast-1": "Singapore",
+  "ca-central-1": "Canada",
+  "eu-west-2": "London",
+  "eu-west-3": "Paris",
+  "ap-northeast-3": "Osaka",
+  "us-west-2": "Oregon",
+};
+
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [instances, setInstances] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const [user, setUser] = useState({});
 
@@ -54,10 +70,32 @@ export default function Dashboard() {
     return res.data;
   };
 
+  // Filter instances based on search query
+  const filteredInstances = instances.filter((instance) => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const serviceName = instance.service?.name?.toLowerCase() || "";
+    const instanceName = instance.name?.toLowerCase() || "";
+    const plan = instance.plan?.toLowerCase() || "";
+    const status = instance.status?.toLowerCase() || "";
+    const region = instance.region?.toLowerCase() || "";
+    const regionName = REGION_NAMES[instance.region]?.toLowerCase() || "";
+    
+    return (
+      serviceName.includes(query) ||
+      instanceName.includes(query) ||
+      plan.includes(query) ||
+      status.includes(query) ||
+      region.includes(query) ||
+      regionName.includes(query)
+    );
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <HashLoader />;
+        <HashLoader />
       </div>
     );
   }
@@ -97,10 +135,11 @@ export default function Dashboard() {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-4">
               <Input
-                disabled
                 type="search"
-                placeholder="Search services by name, plan, and tags..."
+                placeholder="Search services by name, plan, region, status..."
                 className="w-full max-w-lg"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Button
                 onClick={refreshContent}
@@ -116,13 +155,15 @@ export default function Dashboard() {
                 Show only services with alerts
               </Label>
             </div>
-            {instances.length === 0 ? (
+            {filteredInstances.length === 0 ? (
               <h2 className="text-xl font-semibold text-center">
-                No orca instances found
+                {searchQuery.trim() 
+                  ? "No instances match your search" 
+                  : "No orca instances found"}
               </h2>
             ) : (
               <InstanceTable
-                instances={instances}
+                instances={filteredInstances}
                 setInstances={setInstances}
               />
             )}
