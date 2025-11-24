@@ -66,6 +66,20 @@ export const getContainers = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, containers));
 });
 
+export const getContainer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const container = await Containers.findOne({ 
+    _id: id, 
+    user: req.user._id 
+  }).populate("service");
+  
+  if (!container) {
+    throw new ApiError(404, "Container not found");
+  }
+  
+  return res.status(200).json(new ApiResponse(200, container));
+});
+
 export const containerUpdates = asyncHandler(async (req, res) => {
   // EventBridge sends events directly as JSON (no SNS envelope)
   const body = req.body;

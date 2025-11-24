@@ -3,6 +3,7 @@ import {
   containerUpdates,
   createContainer,
   getContainers,
+  getContainer,
   redirectToTask,
   stopContainer,
 } from "../controllers/container.controller.js";
@@ -13,6 +14,8 @@ const router = Router();
 router.route("/startNew").post(auth, createContainer);
 
 router.route("/getContainers").get(auth, getContainers);
+
+router.route("/getContainer/:id").get(auth, getContainer);
 
 router.route("/redirectToTask/:taskArn").get(redirectToTask);
 

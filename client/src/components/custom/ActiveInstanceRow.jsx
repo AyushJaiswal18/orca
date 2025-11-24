@@ -3,8 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import DialogBox from "./DialogBox";
 import LaunchDialog from "./LaunchDialog";
-import { Globe, Clock } from "lucide-react";
+import { Globe, Clock, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 // Region display names mapping
 const REGION_NAMES = {
@@ -109,7 +110,13 @@ export default function ActiveInstanceRow({ instance, setInstances }) {
         </div>
       </TableCell>
       <TableCell className="py-3">
-        <span className="text-sm truncate">{instance.name}</span>
+        <Link
+          to={`/orca-details/${instance._id}`}
+          className="text-sm font-medium text-primary hover:underline truncate flex items-center gap-1.5 group"
+        >
+          {instance.name}
+          <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+        </Link>
       </TableCell>
       <TableCell className="py-3">
         <div className="flex flex-col gap-0.5">

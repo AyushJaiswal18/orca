@@ -31,7 +31,7 @@ function App() {
       .then((data) => {
         setauthStatus(true);
         // If authenticated and on a public route, redirect to dashboard
-        const publicRoutes = ["/", "/login", "/signup"];
+        const publicRoutes = ["/", "/login", "/signup", "/about", "/documentation", "/contact", "/terms", "/privacy"];
         if (publicRoutes.includes(window.location.pathname)) {
           navigate("/dashboard");
         }
@@ -40,7 +40,7 @@ function App() {
         removeAuthToken();
         setauthStatus(false);
         // If not authenticated and on a protected route, redirect to landing page
-        const publicRoutes = ["/", "/login", "/signup"];
+        const publicRoutes = ["/", "/login", "/signup", "/about", "/documentation", "/contact", "/terms", "/privacy"];
         if (!publicRoutes.includes(window.location.pathname)) {
           navigate("/");
         }
