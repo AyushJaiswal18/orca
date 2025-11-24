@@ -183,22 +183,38 @@ async function getContainerTargetUrl(taskArn, userId) {
     throw new ApiError(404, "Container not found or access denied");
   }
 
-  // Get target IP - use stored URL or fetch fresh
-  let targetIp = null;
-  if (container.url) {
-    targetIp = extractIpFromUrl(container.url);
+  // Verify container is in RUNNING status
+  if (container.status !== "RUNNING") {
+    throw new ApiError(400, `Container is not running. Current status: ${container.status}`);
   }
 
-  // If no IP from stored URL, fetch it
-  if (!targetIp) {
+  // Get target IP - always fetch fresh to ensure we have the latest IP
+  // (IPs can change if containers are stopped and restarted)
+  let targetIp = null;
+  
+  // Try to get fresh IP from AWS
+  try {
     const publicIpUrl = await getTaskPublicIp(taskArn, container.region);
     if (publicIpUrl) {
       targetIp = extractIpFromUrl(publicIpUrl);
+      // Update stored URL if it changed
+      if (container.url !== publicIpUrl) {
+        container.url = publicIpUrl;
+        await container.save();
+        console.log(`[Proxy] Updated container URL from ${container.url} to ${publicIpUrl}`);
+      }
     }
+  } catch (error) {
+    console.warn(`[Proxy] Could not fetch fresh IP for ${taskArn}, using stored IP:`, error.message);
+  }
+
+  // Fallback to stored IP if fresh fetch failed
+  if (!targetIp && container.url) {
+    targetIp = extractIpFromUrl(container.url);
   }
 
   if (!targetIp) {
-    throw new ApiError(500, "Unable to get container IP address");
+    throw new ApiError(500, "Unable to get container IP address. The container may not be running.");
   }
 
   // Target URL for KasmWeb (uses HTTP, not HTTPS)
@@ -219,18 +235,20 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // Create proxy instance with timeout
+  // Create proxy instance with extended timeout and better connection handling
   const proxy = httpProxy.createProxyServer({
     target: targetUrl,
     ws: true, // Enable WebSocket proxying
     changeOrigin: true,
     secure: false, // KasmWeb uses HTTP, not HTTPS
-    timeout: 30000, // 30 second timeout
-    proxyTimeout: 30000,
+    timeout: 60000, // 60 second timeout (containers may take time to respond)
+    proxyTimeout: 60000,
+    xfwd: true, // Add X-Forwarded-* headers
+    followRedirects: true,
   });
 
   // Handle proxy errors with detailed logging
-  proxy.on("error", (err, req, res) => {
+  proxy.on("error", async (err, req, res) => {
     console.error(`[Proxy] Error proxying to ${targetUrl}:`, {
       message: err.message,
       code: err.code,
@@ -242,6 +260,24 @@ export const proxyContainer = asyncHandler(async (req, res) => {
       let errorMessage = "Unable to connect to container";
       if (err.code === "ECONNREFUSED") {
         errorMessage = "Container is not accepting connections. It may be starting up or the security group may be blocking access.";
+      } else if (err.code === "ECONNRESET") {
+        errorMessage = "Connection was reset by the container. The container may have stopped or is restarting. Please try again in a moment.";
+        // Try to refresh the container status
+        try {
+          const container = await Containers.findOne({ taskArn });
+          if (container) {
+            console.log(`[Proxy] Attempting to refresh IP for container ${taskArn}`);
+            const freshIp = await getTaskPublicIp(taskArn, container.region);
+            if (freshIp) {
+              const newIp = extractIpFromUrl(freshIp);
+              container.url = freshIp;
+              await container.save();
+              console.log(`[Proxy] Updated container IP to ${newIp}`);
+            }
+          }
+        } catch (refreshError) {
+          console.error(`[Proxy] Error refreshing container IP:`, refreshError.message);
+        }
       } else if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT") {
         errorMessage = "Connection to container timed out. The container may be unreachable.";
       } else if (err.code === "ENOTFOUND") {
@@ -256,12 +292,12 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     }
   });
 
-  // Set request timeout
-  req.setTimeout(30000, () => {
+  // Set request timeout (extended for container startup)
+  req.setTimeout(60000, () => {
     if (!res.headersSent) {
       res.status(504).json({
         success: false,
-        message: "Request timeout: Container did not respond in time",
+        message: "Request timeout: Container did not respond in time. It may still be starting up.",
       });
     }
   });

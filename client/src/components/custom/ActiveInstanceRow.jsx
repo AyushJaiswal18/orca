@@ -99,12 +99,31 @@ function formatRegion(region) {
 export default function ActiveInstanceRow({ instance, setInstances }) {
   const serviceIcon = useMemo(() => getServiceIcon(instance.service?.name), [instance.service?.name]);
 
-  // Build proxy URL with token for authentication
-  const getProxyUrl = (taskArn) => {
-    const token = getAuthToken();
-    const baseUrl = `${apiClient.defaults.baseURL}/containers/proxy/${taskArn}`;
-    return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
-  };
+  // Build proxy URL with token for authentication - memoized to ensure token is included
+  const proxyUrl = useMemo(() => {
+    if (!instance.taskArn) return "";
+    
+    // Get token - try multiple times to ensure we get it
+    let token = getAuthToken();
+    
+    // If no token, try again (in case of timing issues)
+    if (!token) {
+      token = getAuthToken();
+    }
+    
+    const baseUrl = `${apiClient.defaults.baseURL}/containers/proxy/${instance.taskArn}`;
+    
+    if (token && token.trim()) {
+      const urlWithToken = `${baseUrl}?token=${encodeURIComponent(token)}`;
+      return urlWithToken;
+    }
+    
+    // Log warning if no token (for debugging)
+    console.warn("No auth token found when building proxy URL for taskArn:", instance.taskArn);
+    console.warn("This will cause authentication to fail. User may need to log in again.");
+    
+    return baseUrl;
+  }, [instance.taskArn]);
 
   return (
     <TableRow className="hover:bg-muted/50">
@@ -136,10 +155,10 @@ export default function ActiveInstanceRow({ instance, setInstances }) {
       </TableCell>
       <TableCell className="py-3 text-right">
         <div className="flex items-center justify-end gap-2">
-          {instance.status === "RUNNING" && instance.taskArn && (
+          {instance.status === "RUNNING" && instance.taskArn && proxyUrl && (
             <a
               className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
-              href={getProxyUrl(instance.taskArn)}
+              href={proxyUrl}
               target="_blank"
               rel="noopener noreferrer"
             >
