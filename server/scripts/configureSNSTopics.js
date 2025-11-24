@@ -4,6 +4,7 @@ import {
   SubscribeCommand,
   ListSubscriptionsByTopicCommand,
   GetTopicAttributesCommand,
+  SetSubscriptionAttributesCommand,
 } from "@aws-sdk/client-sns";
 import dotenv from "dotenv";
 
@@ -86,26 +87,39 @@ async function subscribeWithJSONFormat(region, topicArn) {
     );
 
     if (existingSubscription) {
-      // Subscription exists, we'll need to set attributes on it
-      // Note: SNS subscriptions don't have a direct "content-type" attribute,
-      // but we can configure the endpoint to receive JSON
-      return {
-        success: true,
-        subscriptionArn: existingSubscription.SubscriptionArn,
-        message: "Subscription already exists",
-        skipped: true,
-      };
+      // Subscription exists - we need to update it to use RawMessageDelivery
+      // This will send the message content directly as JSON without SNS envelope
+      try {
+        const setAttrsCommand = new SetSubscriptionAttributesCommand({
+          SubscriptionArn: existingSubscription.SubscriptionArn,
+          AttributeName: "RawMessageDelivery",
+          AttributeValue: "true",
+        });
+        await snsClient.send(setAttrsCommand);
+        
+        return {
+          success: true,
+          subscriptionArn: existingSubscription.SubscriptionArn,
+          message: "Subscription updated to use RawMessageDelivery (JSON format)",
+          updated: true,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to update subscription: ${error.message}`,
+        };
+      }
     }
 
-    // Create new subscription
+    // Create new subscription with RawMessageDelivery enabled
     const command = new SubscribeCommand({
       TopicArn: topicArn,
       Protocol: "https",
       Endpoint: WEBHOOK_URL,
-      // Set attributes for JSON delivery
       Attributes: {
-        // Configure subscription to send raw message delivery (JSON format)
-        RawMessageDelivery: "false", // Keep false to get SNS envelope with Message field
+        // Enable RawMessageDelivery to send message content directly as JSON
+        // This bypasses the SNS envelope and sends the message directly
+        RawMessageDelivery: "true",
       },
     });
 
@@ -114,8 +128,8 @@ async function subscribeWithJSONFormat(region, topicArn) {
     return {
       success: true,
       subscriptionArn: response.SubscriptionArn,
-      message: "Subscribed with JSON configuration",
-      pending: response.SubscriptionArn === "PendingConfirmation",
+      message: "Subscribed with RawMessageDelivery (JSON format)",
+      pending: response.SubscriptionArn === "PendingConfirmation" || !response.SubscriptionArn,
     };
   } catch (error) {
     return {
@@ -168,7 +182,11 @@ async function configureRegion(region) {
     const subResult = await subscribeWithJSONFormat(region, topicArn);
 
     if (subResult.success) {
-      if (subResult.skipped) {
+      if (subResult.updated) {
+        console.log(`   ✅ Subscription updated to use RawMessageDelivery`);
+        console.log(`   ℹ Messages will now be sent directly as JSON (no SNS envelope)`);
+        console.log(`   ℹ Your endpoint will receive JSON directly in req.body`);
+      } else if (subResult.skipped) {
         console.log(`   ⏭️  Subscription already exists`);
         console.log(`   ℹ Note: SNS sends notifications with Message field containing JSON`);
         console.log(`   ℹ Your endpoint should parse req.body.Message as JSON string`);
@@ -263,22 +281,24 @@ async function configureAllTopics() {
   console.log("=".repeat(70));
   console.log("\n📝 IMPORTANT NOTES:");
   console.log("=".repeat(70));
-  console.log("\nSNS Notification Format:");
-  console.log("  SNS always sends notifications in a specific envelope format:");
+  console.log("\nRawMessageDelivery Enabled:");
+  console.log("  With RawMessageDelivery=true, SNS sends the message content directly");
+  console.log("  without the SNS envelope. Your endpoint will receive:");
   console.log("  {");
-  console.log('    "Type": "Notification",');
-  console.log('    "Message": "<JSON_STRING>",  // Your actual message as JSON string');
-  console.log('    "MessageId": "...",');
-  console.log('    "Timestamp": "...",');
-  console.log('    ...');
+  console.log('    "version": "...",');
+  console.log('    "id": "...",');
+  console.log('    "detail-type": "ECS Task State Change",');
+  console.log('    "detail": { ... }  // Your actual event data');
   console.log("  }");
   console.log("\nYour endpoint should:");
-  console.log("  1. Parse req.body (form-encoded or JSON)");
-  console.log("  2. Extract req.body.Message (it's a JSON string)");
-  console.log("  3. Parse req.body.Message with JSON.parse()");
+  console.log("  1. Parse req.body directly as JSON (not form-encoded)");
+  console.log("  2. Access req.body.detail for task information");
+  console.log("  3. No need to parse req.body.Message");
   console.log("\nExample:");
-  console.log('  const message = JSON.parse(req.body.Message);');
-  console.log('  const taskArn = message.detail.taskArn;');
+  console.log('  const taskArn = req.body.detail.taskArn;');
+  console.log('  const lastStatus = req.body.detail.lastStatus;');
+  console.log("\n⚠ Note: Content-Type will still be text/plain, but body is JSON");
+  console.log("⚠ Your endpoint should parse it as JSON, not form-encoded");
   console.log("\n✅ Configuration complete!\n");
 }
 

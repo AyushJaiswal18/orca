@@ -70,79 +70,46 @@ export const getContainers = asyncHandler(async (req, res) => {
 });
 
 export const containerUpdates = asyncHandler(async (req, res) => {
-  // SNS sends data as form-encoded, so req.body should be parsed by urlencoded middleware
   const body = req.body;
-  
-  // Debug logging
-  console.log("SNS Webhook received");
-  console.log("Content-Type:", req.headers["content-type"]);
-  console.log("Body type:", typeof body);
-  console.log("Body keys:", body ? Object.keys(body) : "undefined");
-  
-  // Handle case where body might be undefined
-  if (!body || (typeof body === "object" && Object.keys(body).length === 0)) {
-    console.error("SNS Webhook - Empty or undefined body");
-    return res.status(200).send("OK");
-  }
-
-  // Handle SubscriptionConfirmation
+  console.log("Confirming subscription:", body.SubscribeURL);
   if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
-    console.log("SNS Subscription Confirmation received");
     try {
+      
       await axios.get(body.SubscribeURL);
-      console.log("Subscription confirmed successfully");
     } catch (error) {
-      console.error("Error confirming subscription:", error.message);
+      console.error("Error confirming subscription:", error);
     }
-    return res.status(200).send("OK");
-  }
-
-  // Handle Notification (task status updates)
-  if (body.Type === "Notification" && body.Message) {
-    try {
-      // Message is a JSON string, parse it
-      const message = typeof body.Message === "string" 
-        ? JSON.parse(body.Message) 
-        : body.Message;
-
-      if (message.detail && message.detail.taskArn) {
-        const lastStatus = message.detail.lastStatus;
-        const taskArn = message.detail.taskArn.split("/").pop();
-        const desiredStatus = message.detail.desiredStatus;
-        
-        console.log(
-          `Task Update: ${taskArn} | LastStatus: ${lastStatus} | DesiredStatus: ${desiredStatus}`
-        );
-
-        const task = await Containers.findOne({ taskArn: taskArn });
-        if (task) {
-          if (lastStatus === "RUNNING" && desiredStatus === "RUNNING") {
-            const publicIp = await getTaskPublicIp(taskArn, task.region);
-            if (publicIp) {
-              task.url = publicIp;
-              task.status = "RUNNING";
-              await task.save();
-            } else {
-              await Containers.findByIdAndDelete(task._id);
-            }
-          } else if (lastStatus === "STOPPED") {
-            try {
-              await Containers.findByIdAndDelete(task._id);
-            } catch (error) {
-              console.error(error);
-            }
-          } else {
-            task.status = lastStatus;
-            await task.save();
-          }
+  } else {
+    const message = JSON.parse(req.body.Message);
+    const lastStatus = message.detail.lastStatus;
+    const taskArn = message.detail.taskArn.split("/").pop();
+    const desiredStatus = message.detail.desiredStatus;
+    console.log(
+      `Task : ${taskArn} LastStatus: ${lastStatus} DesiredStatus: ${desiredStatus}`
+    );
+    const task = await Containers.findOne({ taskArn: taskArn });
+    if (task) {
+      if (lastStatus === "RUNNING" && desiredStatus === "RUNNING") {
+        const publicIp = await getTaskPublicIp(taskArn, task.region);
+        if (publicIp) {
+          task.url = publicIp;
+          task.status = "RUNNING";
+          await task.save();
+        } else {
+          await Containers.findByIdAndDelete(task._id);
         }
+      } else if (lastStatus === "STOPPED") {
+        try {
+          await Containers.findByIdAndDelete(task._id);
+        } catch (error) {
+          console.error(error);
+        }
+      } else {
+        task.status = lastStatus;
+        await task.save();
       }
-    } catch (error) {
-      console.error("Error processing SNS notification:", error);
-      console.error("Message content:", body.Message);
     }
   }
-
   return res.status(200).send("OK");
 });
 
