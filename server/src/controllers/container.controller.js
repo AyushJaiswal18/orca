@@ -71,6 +71,7 @@ export const getContainers = asyncHandler(async (req, res) => {
 
 export const containerUpdates = asyncHandler(async (req, res) => {
   let body
+  console.log(req.body);
 
   if (typeof req.body === 'string') {
     try {

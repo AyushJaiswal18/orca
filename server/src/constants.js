@@ -32,15 +32,11 @@ export const regionConfig = {
   "us-east-1": {
     // N Virginia
     subnets: [
-      // TODO: Replace with your actual subnet IDs for us-east-1
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-037beaed73d9adcec",
+      "subnet-07f0330e294e687ac",
+      "subnet-0eb6ebf31fec761b0",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for us-east-1
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-01adfcbceebf97c06"],
   },
   "us-east-2": {
     // Ohio
@@ -58,106 +54,73 @@ export const regionConfig = {
   "us-west-1": {
     // N California
     subnets: [
-      // TODO: Replace with your actual subnet IDs for us-west-1
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-06aab4b1b46027eed",
+      "subnet-014ddaacff1b678e1",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for us-west-1
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0a8e3dc1cf3c6f532"],
   },
   "ap-northeast-2": {
     // Seoul
     subnets: [
-      // TODO: Replace with your actual subnet IDs for ap-northeast-2
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-086cfe2d71df4310f",
+      "subnet-0576678935c112ddd",
+      "subnet-00c9bdcedf9e25e40",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for ap-northeast-2
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0ae6349b582857de2"],
   },
   "ap-southeast-1": {
     // Singapore
     subnets: [
-      // TODO: Replace with your actual subnet IDs for ap-southeast-1
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-00e0f042be3ce5e1c",
+      "subnet-0ea7f381856c5a6f8",
+      "subnet-0f35c7a867b5d4f43",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for ap-southeast-1
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-08359c7afedfa0e00"],
   },
   "ca-central-1": {
     // Canada
     subnets: [
-      // TODO: Replace with your actual subnet IDs for ca-central-1
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-0ad7ce49ad2143e93",
+      "subnet-04729aa217f80ef7a",
+      "subnet-05cbc61181a0d4ff9",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for ca-central-1
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0493536f76f25ce2b"],
   },
   "eu-west-2": {
     // London
     subnets: [
-      // TODO: Replace with your actual subnet IDs for eu-west-2
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-091a20174d8ab86c4",
+      "subnet-0c5f5756db0cc57d5",
+      "subnet-0b1b9fd7f39308c4d",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for eu-west-2
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0615c3107a13539ab"],
   },
   "eu-west-3": {
     // Paris
     subnets: [
-      // TODO: Replace with your actual subnet IDs for eu-west-3
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-003d4871cc67319fc",
+      "subnet-00a0095946633f776",
+      "subnet-0190e4cd26d442e4c",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for eu-west-3
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0e66e0a0ed1170c24"],
   },
   "ap-northeast-3": {
     // Osaka
     subnets: [
-      // TODO: Replace with your actual subnet IDs for ap-northeast-3
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-0f33a10e52a590bd7",
+      "subnet-0f927da833e0f8b9d",
+      "subnet-06e2c5361cc78e830",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for ap-northeast-3
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-06ab5ce484a5c3c69"],
   },
   "us-west-2": {
     // Oregon
     subnets: [
-      // TODO: Replace with your actual subnet IDs for us-west-2
-      "subnet-01ae542552fbc01fa",
-      "subnet-048071594ee5ceaca",
-      "subnet-0233f75ef70da093c",
+      "subnet-0b15cfc8ca4e81565",
+      "subnet-0c4038151598b8266",
+      "subnet-04278cbd7ec91b658",
     ],
-    securityGroups: [
-      // TODO: Replace with your actual security group ID for us-west-2
-      "sg-036cff92b5d899787",
-    ],
+    securityGroups: ["sg-0e9ba242cc84a64c3"],
   },
 };
 

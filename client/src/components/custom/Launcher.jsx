@@ -14,6 +14,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Available regions - matches backend configuration
+const REGIONS = [
+  { value: "ap-south-1", label: "Mumbai" },
+  { value: "us-east-1", label: "N Virginia" },
+  { value: "us-east-2", label: "Ohio" },
+  { value: "us-west-1", label: "N California" },
+  { value: "ap-northeast-2", label: "Seoul" },
+  { value: "ap-southeast-1", label: "Singapore" },
+  { value: "ca-central-1", label: "Canada" },
+  { value: "eu-west-2", label: "London" },
+  { value: "eu-west-3", label: "Paris" },
+  { value: "ap-northeast-3", label: "Osaka" },
+  { value: "us-west-2", label: "Oregon" },
+];
+
 export default function Launcher() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -120,17 +135,11 @@ export default function Launcher() {
                   <SelectValue placeholder="Select a region" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ap-south-1">Mumbai</SelectItem>
-                  <SelectItem value="us-east-1">N Virginia</SelectItem>
-                  <SelectItem value="us-east-2">Ohio</SelectItem>
-                  <SelectItem value="us-west-1">N California</SelectItem>
-                  <SelectItem value="ap-northeast-2">Seoul</SelectItem>
-                  <SelectItem value="ap-southeast-1">Singapore</SelectItem>
-                  <SelectItem value="ca-central-1">Canada</SelectItem>
-                  <SelectItem value="eu-west-2">London</SelectItem>
-                  <SelectItem value="eu-west-3">Paris</SelectItem>
-                  <SelectItem value="ap-northeast-3">Osaka</SelectItem>
-                  <SelectItem value="us-west-2">Oregon</SelectItem>
+                  {REGIONS.map((reg) => (
+                    <SelectItem key={reg.value} value={reg.value}>
+                      {reg.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
