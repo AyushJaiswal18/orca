@@ -7,9 +7,10 @@ const app = express();
 
 app.use(cors(corsOptions));
 
-
+// SNS sends webhooks as form-encoded (application/x-www-form-urlencoded)
+// urlencoded parser must come before json parser to handle SNS correctly
+app.use(express.urlencoded({ ...urlEncodedOptions, extended: true }));
 app.use(express.json(jsonOptions));
-app.use(express.urlencoded(urlEncodedOptions));
 app.use(express.static("public"));
 
 app.use("/health", (req, res) => {
