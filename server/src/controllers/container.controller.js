@@ -70,9 +70,18 @@ export const getContainers = asyncHandler(async (req, res) => {
 });
 
 export const containerUpdates = asyncHandler(async (req, res) => {
-  const body = req.body;
-  console.log(body);
-  console.log("Confirming subscription:", body.SubscribeURL);
+  let body
+
+  if (typeof req.body === 'string') {
+    try {
+      body = JSON.parse(req.body);
+    } catch (e) {
+      return res.status(400).send('Invalid JSON');
+    }
+  } else {
+    body = req.body;
+  }
+
   if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
     try {
       
@@ -81,7 +90,7 @@ export const containerUpdates = asyncHandler(async (req, res) => {
       console.error("Error confirming subscription:", error);
     }
   } else {
-    const message = JSON.parse(req.body.Message);
+    const message = JSON.parse(body.Message);
     const lastStatus = message.detail.lastStatus;
     const taskArn = message.detail.taskArn.split("/").pop();
     const desiredStatus = message.detail.desiredStatus;

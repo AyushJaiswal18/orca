@@ -7,6 +7,7 @@ const app = express();
 app.use(cors(corsOptions));
 
 // For other endpoints and fallback
+app.use(express.text({ type: 'text/plain' }));
 app.use(express.urlencoded({ ...urlEncodedOptions, extended: true }));
 app.use(express.json(jsonOptions));
 app.use(express.static("public"));
