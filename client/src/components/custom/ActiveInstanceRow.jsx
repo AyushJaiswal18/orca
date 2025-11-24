@@ -1,10 +1,10 @@
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import DialogBox from "./DialogBox";
+import LaunchDialog from "./LaunchDialog";
 import { Globe, Clock } from "lucide-react";
-import { useMemo } from "react";
-import apiClient from "@/utils/api";
-import { getAuthToken } from "@/utils/auth";
+import { useMemo, useState } from "react";
 
 // Region display names mapping
 const REGION_NAMES = {
@@ -98,34 +98,7 @@ function formatRegion(region) {
 
 export default function ActiveInstanceRow({ instance, setInstances }) {
   const serviceIcon = useMemo(() => getServiceIcon(instance.service?.name), [instance.service?.name]);
-
-  // Build proxy URL with token for authentication - memoized to ensure token is included
-  const proxyUrl = useMemo(() => {
-    if (!instance.taskArn) return "";
-    
-    // Get token from localStorage
-    const token = getAuthToken();
-    
-    const baseUrl = `${apiClient.defaults.baseURL}/containers/proxy/${instance.taskArn}`;
-    
-    if (token && token.trim()) {
-      const urlWithToken = `${baseUrl}?token=${encodeURIComponent(token)}`;
-      // Debug log to verify token is included
-      console.log(`[Proxy URL] Built URL with token for taskArn: ${instance.taskArn}`);
-      return urlWithToken;
-    }
-    
-    // Log warning if no token (for debugging)
-    console.error("❌ No auth token found when building proxy URL for taskArn:", instance.taskArn);
-    console.error("Token check:", {
-      tokenExists: !!token,
-      tokenLength: token?.length || 0,
-      localStorageCheck: typeof Storage !== "undefined" ? localStorage.getItem("orca_auth_token") : "localStorage not available"
-    });
-    console.error("This will cause authentication to fail. User may need to log in again.");
-    
-    return baseUrl;
-  }, [instance.taskArn]);
+  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
 
   return (
     <TableRow className="hover:bg-muted/50">
@@ -157,20 +130,20 @@ export default function ActiveInstanceRow({ instance, setInstances }) {
       </TableCell>
       <TableCell className="py-3 text-right">
         <div className="flex items-center justify-end gap-2">
-          {instance.status === "RUNNING" && instance.taskArn && proxyUrl && (
-            <a
-              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
-              href={proxyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                // Debug: log the URL being opened
-                console.log("[Proxy URL] Opening URL:", proxyUrl);
-                console.log("[Proxy URL] Has token:", proxyUrl.includes("?token="));
-              }}
-            >
-              Launch
-            </a>
+          {instance.status === "RUNNING" && instance.url && (
+            <>
+              <Button
+                onClick={() => setLaunchDialogOpen(true)}
+                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
+              >
+                Launch
+              </Button>
+              <LaunchDialog
+                instance={instance}
+                open={launchDialogOpen}
+                onOpenChange={setLaunchDialogOpen}
+              />
+            </>
           )}
           {instance.status != "PROVISIONING" ? (
             <DialogBox
