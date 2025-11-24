@@ -103,24 +103,26 @@ export default function ActiveInstanceRow({ instance, setInstances }) {
   const proxyUrl = useMemo(() => {
     if (!instance.taskArn) return "";
     
-    // Get token - try multiple times to ensure we get it
-    let token = getAuthToken();
-    
-    // If no token, try again (in case of timing issues)
-    if (!token) {
-      token = getAuthToken();
-    }
+    // Get token from localStorage
+    const token = getAuthToken();
     
     const baseUrl = `${apiClient.defaults.baseURL}/containers/proxy/${instance.taskArn}`;
     
     if (token && token.trim()) {
       const urlWithToken = `${baseUrl}?token=${encodeURIComponent(token)}`;
+      // Debug log to verify token is included
+      console.log(`[Proxy URL] Built URL with token for taskArn: ${instance.taskArn}`);
       return urlWithToken;
     }
     
     // Log warning if no token (for debugging)
-    console.warn("No auth token found when building proxy URL for taskArn:", instance.taskArn);
-    console.warn("This will cause authentication to fail. User may need to log in again.");
+    console.error("❌ No auth token found when building proxy URL for taskArn:", instance.taskArn);
+    console.error("Token check:", {
+      tokenExists: !!token,
+      tokenLength: token?.length || 0,
+      localStorageCheck: typeof Storage !== "undefined" ? localStorage.getItem("orca_auth_token") : "localStorage not available"
+    });
+    console.error("This will cause authentication to fail. User may need to log in again.");
     
     return baseUrl;
   }, [instance.taskArn]);
@@ -161,6 +163,11 @@ export default function ActiveInstanceRow({ instance, setInstances }) {
               href={proxyUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                // Debug: log the URL being opened
+                console.log("[Proxy URL] Opening URL:", proxyUrl);
+                console.log("[Proxy URL] Has token:", proxyUrl.includes("?token="));
+              }}
             >
               Launch
             </a>

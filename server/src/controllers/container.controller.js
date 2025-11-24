@@ -5,6 +5,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { Services } from "../models/services.modal.js";
 import { runTask, getTaskPublicIp, stopTask } from "../utils/awsTask.js";
 import httpProxy from "http-proxy";
+import https from "https";
 import axios from "axios";
 
 export const createContainer = asyncHandler(async (req, res) => {
@@ -235,6 +236,11 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // Create HTTPS agent that ignores self-signed certificates
+  const httpsAgent = new https.Agent({
+    rejectUnauthorized: false, // Allow self-signed certificates from containers
+  });
+
   // Create proxy instance with extended timeout and better connection handling
   const proxy = httpProxy.createProxyServer({
     target: targetUrl,
@@ -245,7 +251,7 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     proxyTimeout: 60000,
     xfwd: true, // Add X-Forwarded-* headers
     followRedirects: true,
-    rejectUnauthorized: false, // Allow self-signed certificates from containers
+    agent: httpsAgent, // Use custom HTTPS agent to ignore certificate errors
   });
 
   // Handle proxy errors with detailed logging
@@ -283,6 +289,9 @@ export const proxyContainer = asyncHandler(async (req, res) => {
         errorMessage = "Connection to container timed out. The container may be unreachable.";
       } else if (err.code === "ENOTFOUND") {
         errorMessage = "Container IP address not found.";
+      } else if (err.code === "DEPTH_ZERO_SELF_SIGNED_CERT" || err.code === "SELF_SIGNED_CERT_IN_CHAIN" || err.code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE") {
+        errorMessage = "Certificate verification error. This should be handled by the proxy agent.";
+        console.error(`[Proxy] Certificate error (this should be handled):`, err.code);
       }
       
       res.status(502).json({
@@ -306,6 +315,7 @@ export const proxyContainer = asyncHandler(async (req, res) => {
   // Handle regular HTTP requests
   proxy.web(req, res, {
     target: targetUrl,
+    agent: httpsAgent, // Ensure agent is used for the request
   });
 });
 
@@ -327,6 +337,11 @@ export const proxyContainerWebSocket = async (req, socket, head, userId) => {
       const wsTargetUrl = targetUrl.replace("https://", "wss://");
       console.log(`[Proxy WS] Proxying WebSocket to: ${wsTargetUrl} for taskArn: ${taskArn}`);
 
+      // Create HTTPS agent that ignores self-signed certificates for WebSocket
+      const httpsAgent = new https.Agent({
+        rejectUnauthorized: false, // Allow self-signed certificates from containers
+      });
+
       // Create proxy for WebSocket with timeout
       const proxy = httpProxy.createProxyServer({
         target: wsTargetUrl,
@@ -334,7 +349,7 @@ export const proxyContainerWebSocket = async (req, socket, head, userId) => {
         changeOrigin: true,
         secure: true, // Use secure WebSocket (WSS)
         timeout: 60000,
-        rejectUnauthorized: false, // Allow self-signed certificates from containers
+        agent: httpsAgent, // Use custom HTTPS agent to ignore certificate errors
       });
 
       proxy.on("error", (err) => {
