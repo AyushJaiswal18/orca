@@ -70,57 +70,88 @@ export const getContainers = asyncHandler(async (req, res) => {
 });
 
 export const containerUpdates = asyncHandler(async (req, res) => {
-  let body
-  console.log(req.body);
+  // EventBridge sends events directly as JSON (no SNS envelope)
+  const body = req.body;
 
-  if (typeof req.body === 'string') {
+  // Handle both EventBridge format and legacy SNS format for backward compatibility
+  let eventDetail = null;
+  let lastStatus = null;
+  let taskArn = null;
+  let desiredStatus = null;
+
+  // Check if this is EventBridge format (direct event)
+  if (body.detail && body["detail-type"] === "ECS Task State Change") {
+    // EventBridge format
+    eventDetail = body.detail;
+    lastStatus = eventDetail.lastStatus;
+    taskArn = eventDetail.taskArn?.split("/").pop();
+    desiredStatus = eventDetail.desiredStatus;
+    console.log(`EventBridge: Task ${taskArn} | LastStatus: ${lastStatus} | DesiredStatus: ${desiredStatus}`);
+  }
+  // Check if this is SNS format (legacy support)
+  else if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
     try {
-      body = JSON.parse(req.body);
-    } catch (e) {
-      return res.status(400).send('Invalid JSON');
+      await axios.get(body.SubscribeURL);
+      console.log("SNS subscription confirmed");
+      return res.status(200).send("OK");
+    } catch (error) {
+      console.error("Error confirming SNS subscription:", error);
+      return res.status(200).send("OK");
     }
-  } else {
-    body = req.body;
+  } else if (body.Type === "Notification" && body.Message) {
+    // SNS notification format
+    try {
+      const message = typeof body.Message === "string" ? JSON.parse(body.Message) : body.Message;
+      if (message.detail) {
+        eventDetail = message.detail;
+        lastStatus = eventDetail.lastStatus;
+        taskArn = eventDetail.taskArn?.split("/").pop();
+        desiredStatus = eventDetail.desiredStatus;
+        console.log(`SNS: Task ${taskArn} | LastStatus: ${lastStatus} | DesiredStatus: ${desiredStatus}`);
+      }
+    } catch (error) {
+      console.error("Error parsing SNS message:", error);
+      return res.status(200).send("OK");
+    }
   }
 
-  if (body.Type === "SubscriptionConfirmation" && body.SubscribeURL) {
-    try {
-      
-      await axios.get(body.SubscribeURL);
-    } catch (error) {
-      console.error("Error confirming subscription:", error);
-    }
-  } else {
-    const message = JSON.parse(body.Message);
-    const lastStatus = message.detail.lastStatus;
-    const taskArn = message.detail.taskArn.split("/").pop();
-    const desiredStatus = message.detail.desiredStatus;
-    console.log(
-      `Task : ${taskArn} LastStatus: ${lastStatus} DesiredStatus: ${desiredStatus}`
-    );
+  // Process the event if we have valid data
+  if (taskArn && lastStatus) {
     const task = await Containers.findOne({ taskArn: taskArn });
     if (task) {
       if (lastStatus === "RUNNING" && desiredStatus === "RUNNING") {
+        // Task is running, get public IP
         const publicIp = await getTaskPublicIp(taskArn, task.region);
         if (publicIp) {
           task.url = publicIp;
           task.status = "RUNNING";
           await task.save();
+          console.log(`✅ Task ${taskArn} is RUNNING at ${publicIp}`);
         } else {
+          console.log(`⚠️ Could not get public IP for task ${taskArn}`);
           await Containers.findByIdAndDelete(task._id);
         }
       } else if (lastStatus === "STOPPED") {
+        // Task stopped, delete container record
+        console.log(`🗑️ Task ${taskArn} is STOPPED, deleting container`);
         try {
           await Containers.findByIdAndDelete(task._id);
         } catch (error) {
-          console.error(error);
+          console.error("Error deleting stopped container:", error);
         }
       } else {
+        // Update status for other states (PROVISIONING, PENDING, etc.)
         task.status = lastStatus;
         await task.save();
+        console.log(`📝 Task ${taskArn} status updated to ${lastStatus}`);
       }
+    } else {
+      console.log(`⚠️ No container found for task ${taskArn}`);
     }
+  } else {
+    console.log("⚠️ Invalid event format - missing taskArn or lastStatus");
   }
+
   return res.status(200).send("OK");
 });
 

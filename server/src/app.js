@@ -6,10 +6,10 @@ const app = express();
 
 app.use(cors(corsOptions));
 
-// For other endpoints and fallback
-app.use(express.text({ type: 'text/plain' }));
-app.use(express.urlencoded({ ...urlEncodedOptions, extended: true }));
+// EventBridge sends JSON payloads, ensure JSON parser handles them
+// Order matters: JSON parser should come before urlencoded for EventBridge
 app.use(express.json(jsonOptions));
+app.use(express.urlencoded({ ...urlEncodedOptions, extended: true }));
 app.use(express.static("public"));
 
 app.use("/health", (req, res) => {
