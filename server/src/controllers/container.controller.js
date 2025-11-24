@@ -4,9 +4,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { Services } from "../models/services.modal.js";
 import { runTask, getTaskPublicIp, stopTask } from "../utils/awsTask.js";
-import pkg from "http-proxy";
+import httpProxy from "http-proxy";
 import axios from "axios";
-const { createProxy } = pkg;
 
 export const createContainer = asyncHandler(async (req, res) => {
   const { instanceName, selectedService, region } = req.body;
@@ -167,3 +166,108 @@ export const stopContainer = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, {}, "Container Stopped"));
   }
 });
+
+// Extract IP from URL (handles both https://ip:6901 and http://ip:6901 formats)
+function extractIpFromUrl(url) {
+  if (!url) return null;
+  // Remove protocol and extract IP
+  const match = url.match(/(?:https?:\/\/)?([\d.]+)/);
+  return match ? match[1] : null;
+}
+
+// Get target URL for a container
+async function getContainerTargetUrl(taskArn, userId) {
+  // Find container and verify user has access
+  const container = await Containers.findOne({ taskArn, user: userId });
+  if (!container) {
+    throw new ApiError(404, "Container not found or access denied");
+  }
+
+  // Get target IP - use stored URL or fetch fresh
+  let targetIp = null;
+  if (container.url) {
+    targetIp = extractIpFromUrl(container.url);
+  }
+
+  // If no IP from stored URL, fetch it
+  if (!targetIp) {
+    const publicIpUrl = await getTaskPublicIp(taskArn, container.region);
+    if (publicIpUrl) {
+      targetIp = extractIpFromUrl(publicIpUrl);
+    }
+  }
+
+  if (!targetIp) {
+    throw new ApiError(500, "Unable to get container IP address");
+  }
+
+  // Target URL for KasmWeb (uses HTTP, not HTTPS)
+  return `http://${targetIp}:6901`;
+}
+
+// Proxy container access through server (HTTP)
+export const proxyContainer = asyncHandler(async (req, res) => {
+  const { taskArn } = req.params;
+
+  // Get target URL
+  const targetUrl = await getContainerTargetUrl(taskArn, req.user._id);
+
+  // Create proxy instance
+  const proxy = httpProxy.createProxyServer({
+    target: targetUrl,
+    ws: true, // Enable WebSocket proxying
+    changeOrigin: true,
+    secure: false, // KasmWeb uses HTTP, not HTTPS
+  });
+
+  // Handle proxy errors
+  proxy.on("error", (err, req, res) => {
+    console.error("Proxy error:", err);
+    if (!res.headersSent) {
+      res.status(502).json({
+        success: false,
+        message: "Proxy error: Unable to connect to container",
+      });
+    }
+  });
+
+  // Handle regular HTTP requests
+  proxy.web(req, res, {
+    target: targetUrl,
+  });
+});
+
+// Proxy WebSocket connections (called from server upgrade handler)
+export const proxyContainerWebSocket = async (req, socket, head, userId) => {
+  try {
+    const { taskArn } = req.params || {};
+    
+    if (!taskArn) {
+      socket.destroy();
+      return;
+    }
+
+    // Get target URL
+    const targetUrl = await getContainerTargetUrl(taskArn, userId);
+    const wsTargetUrl = targetUrl.replace("http://", "ws://");
+
+    // Create proxy for WebSocket
+    const proxy = httpProxy.createProxyServer({
+      target: wsTargetUrl,
+      ws: true,
+      changeOrigin: true,
+      secure: false,
+    });
+
+    proxy.on("error", (err) => {
+      console.error("WebSocket proxy error:", err);
+      socket.destroy();
+    });
+
+    // Proxy the WebSocket connection
+    proxy.ws(req, socket, head);
+  } catch (error) {
+    console.error("Error in WebSocket proxy:", error);
+    socket.destroy();
+  }
+};

@@ -12,12 +12,13 @@ export default function InstanceTable({ instances, setInstances }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-1/6">Service</TableHead>
-          <TableHead className="w-1/4">Name</TableHead>
-          <TableHead className="w-1/4">Plan</TableHead>
-          <TableHead className="w-1/6">Status</TableHead>
-          <TableHead className="w-1/5">Created</TableHead>
-          <TableHead className="w-1/4">Action</TableHead>
+          <TableHead className="min-w-[140px]">Service</TableHead>
+          <TableHead className="min-w-[120px]">Name</TableHead>
+          <TableHead className="min-w-[140px]">Plan</TableHead>
+          <TableHead className="min-w-[100px]">Status</TableHead>
+          <TableHead className="min-w-[120px]">Region</TableHead>
+          <TableHead className="min-w-[100px]">Created</TableHead>
+          <TableHead className="min-w-[120px] text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
