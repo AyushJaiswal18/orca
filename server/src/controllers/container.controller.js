@@ -237,8 +237,12 @@ export const proxyContainer = asyncHandler(async (req, res) => {
   }
 
   // Create HTTPS agent that ignores self-signed certificates
+  // This must be done before creating the proxy
   const httpsAgent = new https.Agent({
     rejectUnauthorized: false, // Allow self-signed certificates from containers
+    keepAlive: true,
+    keepAliveMsecs: 1000,
+    maxSockets: 50,
   });
 
   // Create proxy instance with extended timeout and better connection handling
@@ -251,7 +255,16 @@ export const proxyContainer = asyncHandler(async (req, res) => {
     proxyTimeout: 60000,
     xfwd: true, // Add X-Forwarded-* headers
     followRedirects: true,
-    agent: httpsAgent, // Use custom HTTPS agent to ignore certificate errors
+  });
+
+  // Set agent in proxyReq to ensure it's used for HTTPS requests
+  // This must happen before the request is sent
+  proxy.on("proxyReq", (proxyReq, req, res) => {
+    if (targetUrl.startsWith("https://")) {
+      // Force set the agent on the request - this is critical for self-signed certs
+      proxyReq.agent = httpsAgent;
+      console.log(`[Proxy] Applied HTTPS agent with rejectUnauthorized=false`);
+    }
   });
 
   // Handle proxy errors with detailed logging
@@ -315,8 +328,9 @@ export const proxyContainer = asyncHandler(async (req, res) => {
   // Intercept response to handle Set-Cookie headers properly
   // This ensures cookies from KasmWeb are forwarded and work with the proxy domain
   proxy.on("proxyRes", (proxyRes, req, res) => {
-    // Log all response headers for debugging
-    console.log(`[Proxy] Response headers:`, Object.keys(proxyRes.headers));
+    // Log response status and headers for debugging
+    console.log(`[Proxy] Response status: ${proxyRes.statusCode}`);
+    console.log(`[Proxy] Response headers keys:`, Object.keys(proxyRes.headers));
     
     // Handle Set-Cookie headers - rewrite domain to work with proxy
     const setCookieHeader = proxyRes.headers["set-cookie"];
@@ -338,21 +352,40 @@ export const proxyContainer = asyncHandler(async (req, res) => {
         return newCookie;
       });
       
-      // Remove the original header and set the rewritten one
-      delete proxyRes.headers["set-cookie"];
-      res.setHeader("set-cookie", rewrittenCookies);
+      // Modify the header in place rather than deleting and re-adding
+      // This ensures http-proxy forwards it correctly
+      proxyRes.headers["set-cookie"] = rewrittenCookies;
       
-      console.log(`[Proxy] Rewritten Set-Cookie headers:`, rewrittenCookies);
+      console.log(`[Proxy] Modified ${rewrittenCookies.length} cookie(s) in response`);
+      console.log(`[Proxy] Cookie names:`, rewrittenCookies.map(c => {
+        const name = c.split('=')[0];
+        return name;
+      }));
     } else {
       console.log(`[Proxy] No Set-Cookie headers in response`);
     }
+    
+    // Ensure all other headers are forwarded (http-proxy should do this, but let's be explicit)
+    // Don't override headers that are already set
+    Object.keys(proxyRes.headers).forEach((key) => {
+      if (key.toLowerCase() !== "set-cookie" && !res.getHeader(key)) {
+        res.setHeader(key, proxyRes.headers[key]);
+      }
+    });
   });
 
-  // Handle regular HTTP requests - http-proxy will automatically forward all headers and cookies
-  proxy.web(req, res, {
+  // Handle regular HTTP requests
+  // Pass agent in options to ensure it's used
+  const proxyOptions = {
     target: targetUrl,
-    agent: httpsAgent, // Ensure agent is used for the request
-  });
+  };
+  
+  // For HTTPS targets, explicitly set the agent
+  if (targetUrl.startsWith("https://")) {
+    proxyOptions.agent = httpsAgent;
+  }
+  
+  proxy.web(req, res, proxyOptions);
 });
 
 // Proxy WebSocket connections (called from server upgrade handler)
