@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ChevronRight,
 } from "lucide-react";
+import OrcaLogo from "@/components/custom/OrcaLogo";
 
 export default function Documentation() {
   const { authStatus } = useAuth();
@@ -101,9 +102,7 @@ export default function Documentation() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                  <Rocket className="w-6 h-6 text-primary-foreground" />
-                </div>
+                <OrcaLogo className="w-10 h-10" width={40} height={26.67} />
                 <span className="text-2xl font-bold">Orca</span>
               </Link>
               <div className="flex items-center gap-4">

@@ -21,6 +21,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import OrcaLogo from "@/components/custom/OrcaLogo";
 
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState({});
@@ -58,9 +59,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center transition-transform hover:scale-110 duration-300">
-                <Rocket className="w-6 h-6 text-primary-foreground" />
-              </div>
+              <OrcaLogo className="w-10 h-10 transition-transform hover:scale-110 duration-300" width={40} height={26.67} />
               <span className="text-2xl font-bold">Orca</span>
             </div>
             <div className="flex items-center gap-4">
@@ -339,9 +338,7 @@ export default function LandingPage() {
             {/* Brand Column */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center transition-transform hover:scale-110 duration-300">
-                  <Rocket className="w-6 h-6 text-primary-foreground" />
-                </div>
+                <OrcaLogo className="w-10 h-10 transition-transform hover:scale-110 duration-300" width={40} height={26.67} />
                 <span className="text-2xl font-bold">Orca</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
